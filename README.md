@@ -5,15 +5,16 @@ This repo is an adaptation of [pytorch-relation-extraction](https://github.com/S
 
 
 ## Framework
+<br/>
 <p align="left"><img width="100%" src="demo/fig1.png" /></p>
-
-
+<br/>
 
 ## Data Preparation
 
 ### Download data from Baidu disk
 
 **URL**: https://pan.baidu.com/s/1mWWAZ7PjnHmAvZHzgXczmQ 
+
 **Code**：qq0o 
 
 ### Processing
@@ -29,7 +30,6 @@ g++ extract.cpp -o extract
 # get back to the root path
 python -u dataset/nyt.py
 ```
-
 
 
 ## Execute training
@@ -53,12 +53,18 @@ python -u main_mil.py train --data="NYT" --use_gpu=True
 # refer to the jupyter notebook
 jupyter notebook plot_results.ipynb
 ```
+
 ### NYT-SMALL
+
+<br/>
 <p align="left"><img width="50%" src="demo/filternyt_PR.png" /></p>
+<br/>
+
 ### NYT-LARGE
+
+<br/>
 <p align="left"><img width="50%" src="demo/nyt_PR.png" /></p>
-
-
+<br/>
 
 ## Visualize influences of instances
 
