@@ -1,0 +1,3 @@
+,ent1,ent2,rel,influence,pred_prob,pred_label,sentence
+0,pico-union,los_angeles,/location/neighborhood/neighborhood_of,-2.2577045,0.4514421224594116,/location/neighborhood/neighborhood_of,", for instance , was born in the crowded , 	 mexican and 	 community of 	 , just west of the skyscrapers of downtown los_angeles ."
+1,pico-union,los_angeles,/location/neighborhood/neighborhood_of,-0.399628,0.9057754278182983,/location/neighborhood/neighborhood_of,"like the three services celebrated earlier in the morning and the four that will follow into the afternoon , the 	 	 sunday mass at 	 thomas the apostle church in the 	 district of downtown los_angeles is crammed to the rafters , even though the church holds nearly 	 parishioners ."

@@ -23,7 +23,8 @@ data_dic ={
 class DefaultConfig(object):
 
     model = 'PCNN_IF'  # the name of used model, in  <models/__init__.py>
-    data = 'FilterNYT'  # SEM NYT FilterNYT
+    # data = 'FilterNYT'  # SEM NYT FilterNYT
+    data = "NYT"
 
     result_dir = './out'
     data_root = data_dic[data]['data_root']  # the data dir
@@ -64,7 +65,10 @@ class DefaultConfig(object):
     rel_filters_num = 100
 
     print_opt = 'DEF'
+
     use_pcnn=True
+
+    rel = 0 # for visualization
 
 
 def parse(self, kwargs):

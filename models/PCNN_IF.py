@@ -226,3 +226,43 @@ class PCNN_IF(BasicModule):
         out = self.dropout(out)
         out = self.linear(out)
         return out
+
+    def cal_ins_influence(self, s_test, data, label):
+        self.eval()
+        s_test = [s_.view(-1,1) for s_ in s_test]
+
+        insNum = data[1]
+        label = label.repeat(insNum)
+
+        if self.opt.use_gpu:
+            label = label.cuda()
+
+        # do prediction first
+        if self.opt.use_gpu:
+            data = map(lambda x: torch.LongTensor(x).cuda(), data)
+        else:
+            data = map(lambda x: torch.LongTensor(x), data)
+
+        pred, x_h = self.forward(data, hidden=True)
+        pred = F.softmax(pred, 1)
+        num_class = pred.shape[1]
+        y_oh = F.one_hot(label, num_classes=num_class).float()
+
+        # calculate influence
+        diff_pred = pred - y_oh
+        x_h = torch.unsqueeze(x_h, 1)
+        partial_J_theta = x_h * torch.unsqueeze(diff_pred, 2)
+        partial_J_theta = partial_J_theta.view(-1, partial_J_theta.shape[1] * partial_J_theta.shape[2]).detach()
+
+        # get grad bias
+        if self.opt.use_gpu:
+            partial_J_b = torch.mm(diff_pred, torch.eye(num_class).cuda())
+        else:
+            partial_J_b = torch.mm(diff_pred, torch.eye(num_class))
+
+        # get the IF
+        predicted_loss_diff = -torch.mm(partial_J_theta, s_test[0]) \
+         -torch.mm(partial_J_b, s_test[1])
+
+        predicted_loss_diff = predicted_loss_diff.view(-1).detach().cpu().numpy()
+        return predicted_loss_diff, pred

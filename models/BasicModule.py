@@ -9,8 +9,12 @@ class BasicModule(torch.nn.Module):
         super(BasicModule, self).__init__()
         self.model_name=str(type(self))  # model name
 
-    def load(self, path):
-        self.load_state_dict(torch.load(path))
+    def load(self, path, use_gpu=True):
+        if use_gpu == False:
+            self.load_state_dict(torch.load(path, map_location=torch.device("cpu")))
+        else:
+            self.load_state_dict(torch.load(path))
+
 
     def save(self, name=None):
         prefix = 'checkpoints/'
