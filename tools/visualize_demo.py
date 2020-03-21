@@ -29,46 +29,20 @@ def load_rel(root_path="./dataset/NYT"):
 
     return id2rel, rel2id
 
+def load_word2id(root_path="./dataset/NYT"):
+    w2id_path = os.path.join(root_path, "word2id.npy")
+    id2w_path = os.path.join(root_path, "id2word.npy")
+    
+    word2id = np.load(w2id_path, allow_pickle=True).item()
+    id2word = np.load(id2w_path, allow_pickle=True).item()
+    return word2id, id2word
+
 def load_ent2id(root_path="./dataset/NYT"):
     ent2id_path = os.path.join(root_path, "ent2id.npy")
     id2ent_path = os.path.join(root_path, "id2ent.npy")
     ent2id = np.load(ent2id_path, allow_pickle=True).item()
     id2ent = np.load(id2ent_path, allow_pickle=True).item()
     return id2ent, ent2id
-
-
-def load_ent2word(root_path="./dataset/NYT"):
-    filename = os.path.join(root_path,"ent2word.npy")
-    ent2word = np.load(filename, allow_pickle=True).item()
-    return ent2word
-
-def load_w2v(root_path="./dataset/NYT"):
-    '''
-    reading from vec.bin
-    add two extra tokens:
-        : UNK for unkown tokens
-    '''
-    wordlist = []
-
-    w2v_path = os.path.join(root_path,"vector.txt")
-
-    f = open(w2v_path)
-    # dim = int(f.readline().split()[1])
-    # f = f.readlines()
-
-    vecs = []
-    for line in f:
-        line = line.strip('\n').split()
-        vec = list(map(float, line[1].split(',')[:-1]))
-        vecs.append(vec)
-        wordlist.append(line[0])
-
-    #  wordlist.append('UNK')
-    #  vecs.append(np.random.uniform(low=-0.5, high=0.5, size=dim))
-    word2id = {j: i for i, j in enumerate(wordlist)}
-    id2word = {i: j for i, j in enumerate(wordlist)}
-
-    return np.array(vecs, dtype=np.float32), word2id, id2word
 
 def save_s_test(s_test):
     s_test_dict = {kk:vv.detach().cpu().numpy() for kk,vv in enumerate(s_test)}
@@ -95,7 +69,7 @@ def go(**kwargs):
     opt.parse(kwargs)
      
     # load id to word dict
-    w2v, word2id, id2word = load_w2v("./dataset/NYT")
+    word2id, id2word = load_word2id("./dataset/NYT")
     id2ent, ent2id = load_ent2id("./dataset/NYT")
     
     # blank placeholder

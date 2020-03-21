@@ -131,3 +131,5 @@ dmypy.json
 # data
 dataset/NYT/
 dataset/FilterNYT/
+demo/
+s_test.npy

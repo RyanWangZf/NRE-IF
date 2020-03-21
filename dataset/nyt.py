@@ -46,6 +46,13 @@ class NYTLoad(object):
         self.pos_dim = pos_dim
         self.pad = pad
 
+        # add ent2id mapping for parsing processed data
+        self.ent2id = {}
+        self.id2ent = {}
+        self.ent2id_path = os.path.join(root_path, "ent2id.npy")
+        self.id2ent_path = os.path.join(root_path, "id2ent.npy")
+        self.ent_id_num = 0
+        
         self.w2v_path = os.path.join(root_path, 'vector.txt')
         self.train_path = os.path.join(root_path, 'bags_train.txt')
         self.test_path = os.path.join(root_path, 'bags_test.txt')
@@ -57,16 +64,23 @@ class NYTLoad(object):
         np.save(os.path.join(self.root_path, 'w2v.npy'), self.w2v)
         np.save(os.path.join(self.root_path, 'p1_2v.npy'), self.p1_2v)
         np.save(os.path.join(self.root_path, 'p2_2v.npy'), self.p2_2v)
-
+        np.save(os.path.join(self.root_path, 'word2id.npy'), self.word2id)
+        np.save(os.path.join(self.root_path, 'id2word.npy'), self.id2word)
+        
         print("parsing train text...")
         self.bags_feature, self.labels = self.parse_sen(self.train_path, 'train')
         np.save(os.path.join(self.root_path, 'train', 'bags_feature.npy'), self.bags_feature)
         np.save(os.path.join(self.root_path, 'train', 'labels.npy'), self.labels)
-
+        
         print("parsing test text...")
         self.bags_feature, self.labels = self.parse_sen(self.test_path, 'test')
         np.save(os.path.join(self.root_path, 'test', 'bags_feature.npy'), self.bags_feature)
         np.save(os.path.join(self.root_path, 'test', 'labels.npy'), self.labels)
+        
+        # save id2entity, entity2id
+        np.save(self.ent2id_path, self.ent2id)
+        np.save(self.id2ent_path, self.id2ent)
+        
         print('save finish!')
 
     def load_p2v(self):
@@ -132,9 +146,18 @@ class NYTLoad(object):
 
             for i in range(num):
                 ent_pair_line = f.readline().strip().split(',')
-                #  entities = ent_pair_line[:2]
-                # ignore the entities index in vocab
-                entities = [0, 0]
+                ent1, ent2 = ent_pair_line[:2]
+                
+                if self.ent2id.get(ent1) is None:
+                    self.ent2id[ent1] = self.ent_id_num
+                    self.ent_id_num += 1
+                
+                if self.ent2id.get(ent2) is None:
+                    self.ent2id[ent2] = self.ent_id_num
+                    self.ent_id_num += 1
+                    
+                entities = [self.ent2id[ent1], self.ent2id[ent2]]
+                
                 epos = list(map(lambda x: int(x) + 1, ent_pair_line[2:4]))
                 pos.append(epos)
                 epos.sort()
@@ -162,10 +185,15 @@ class NYTLoad(object):
             all_sens += [bag]
 
         f.close()
+        
+        # save ent2id and id2ent
+        for k,v in self.ent2id.items():
+            self.id2ent[v] = k
+        
         bags_feature = self.get_sentence_feature(all_sens)
 
         return bags_feature, all_labels
-
+    
     def get_sentence_feature(self, bags):
         '''
         : word embedding
@@ -323,4 +351,49 @@ class NYTLoad(object):
 
 
 if __name__ == "__main__":
+    # preprocess
     data = NYTLoad('./dataset/NYT/')
+    
+    # extract validation data for calculating influence function
+    np.random.seed(2020)
+    # SET sampling ratio
+    sample_ratio = 0.1
+    dir_name = "./dataset/NYT/train"
+    
+    output_dir_name = "./dataset/NYT/val"
+    if not os.path.exists(output_dir_name):
+        os.mkdir(output_dir_name)
+    
+    output_feat_name = os.path.join(output_dir_name, "bags_feature.npy")
+    output_label_name = os.path.join(output_dir_name,"labels.npy")
+
+    data_name = os.path.join(dir_name, "bags_feature.npy")
+    label_name = os.path.join(dir_name, "labels.npy")
+
+    bags_feature = np.load(data_name, allow_pickle=True)
+    labels = np.load(label_name, allow_pickle=True)
+
+    features = []
+    label_list = []
+
+    all_idxs = np.arange(len(labels))
+    selected_idxs = np.random.choice(all_idxs, 
+            int(sample_ratio*len(all_idxs)), replace=False)
+
+    # if label == 0, means this bag has not a relation (Negative Bags)
+    # if label == -1, means the label is unknown.
+    relations = np.max(labels, 1)
+
+    bags_feature = bags_feature[selected_idxs]
+    relations = relations[selected_idxs]
+    relations[relations>0] = 1
+
+    all_relations = []
+    for i in range(len(bags_feature)):
+        insNum = bags_feature[i][1]
+        all_relations.append([relations[i]]*insNum)
+
+    # save
+    np.save(output_feat_name, bags_feature)
+    np.save(output_label_name, all_relations)
+    print("Done Validation Set to {}, ratio {} from train file.".format(output_dir_name, sample_ratio))
