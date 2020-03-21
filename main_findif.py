@@ -78,7 +78,7 @@ def train(**kwargs):
                 # first epoch, we use PCNN-ONE strategy
                 sub_data = select_instance_ONE(model, data, label)
             else:
-                sub_data, sub_label = select_influential_instance(model, data, label, s_test)
+                sub_data, sub_label = select_influential_instance(model, data, label, s_test, opt.sample_ratio)
 
             model.batch_size = opt.batch_size
 
@@ -245,7 +245,7 @@ def select_influential_instance(model, batch_data, labels, s_test, sample_ratio=
     model.train()
     return data, sub_labels
 
-def cal_sampling_prob(phi, sigmoid_k=10):
+def cal_sampling_prob(phi, sigmoid_k=1):
     if phi.std() == 0:
         # all same
         prob_pi = np.array([0.5]*len(phi))

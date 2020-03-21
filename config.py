@@ -35,6 +35,8 @@ class DefaultConfig(object):
 
     seed = 3435
     batch_size = 128  # batch size
+    sample_ratio = 0.1 # sampling ratio for influence subsampling
+
     use_gpu = True  # user GPU or not
     gpu_id = 0
     num_workers = 0  # how many workers for loading data
