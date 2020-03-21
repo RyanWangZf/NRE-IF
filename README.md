@@ -36,13 +36,13 @@ python -u dataset/nyt.py
 
 ```shell
 # Training PCNN+IF
-python -u main_findif.py train --sample_ratio=0.1 --data="NYT" --use_gpu=True
+python -u main_findif.py train --num_epochs=20 --sample_ratio=0.1 --data="NYT" --use_gpu=True
 
 # Training PCNN+ATT
-python -u main_att.py train --data="NYT" --use_gpu=True
+python -u main_att.py train --num_epochs=20 --data="NYT" --use_gpu=True
 
 # Training PCNN+ONE
-python -u main_mil.py train --data="NYT" --use_gpu=True
+python -u main_mil.py train --num_epochs=20 --data="NYT" --use_gpu=True
 ```
 
 
@@ -70,7 +70,7 @@ jupyter notebook plot_results.ipynb
 
 ```shell
 # calculate inverse HVP with the trained model
-srun --gres=gpu:1 python -u tools/cal_inv_hvp.py go --use_gpu=True
+python -u tools/cal_inv_hvp.py go --use_gpu=True
 
 # get influence of selected relation
 # specify which relation you want to explore by set '--rel=?'
