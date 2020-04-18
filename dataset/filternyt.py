@@ -225,5 +225,47 @@ if __name__ == "__main__":
     data = FilterNYTLoad('./dataset/FilterNYT/')
     # data = FilterNYTLoad('./FilterNYT/')    
 
+    # extract validation set for calculating influence functions
+    np.random.seed(2020)
 
+    # SET sampling ratio
+    sample_ratio = 0.1
+    dir_name = "./dataset/FilterNYT/train"
+    
+    output_dir_name = "./dataset/FilterNYT/val"
+    if not os.path.exists(output_dir_name):
+        os.mkdir(output_dir_name)
+    
+    output_feat_name = os.path.join(output_dir_name, "bags_feature.npy")
+    output_label_name = os.path.join(output_dir_name,"labels.npy")
 
+    data_name = os.path.join(dir_name, "bags_feature.npy")
+    label_name = os.path.join(dir_name, "labels.npy")
+
+    bags_feature = np.load(data_name, allow_pickle=True)
+    labels = np.load(label_name, allow_pickle=True)
+
+    features = []
+    label_list = []
+
+    all_idxs = np.arange(len(labels))
+    selected_idxs = np.random.choice(all_idxs, 
+            int(sample_ratio*len(all_idxs)), replace=False)
+
+    # if label == 0, means this bag has not a relation (Negative Bags)
+    # if label == -1, means the label is unknown.
+    relations = np.max(labels, 1)
+
+    bags_feature = bags_feature[selected_idxs]
+    relations = relations[selected_idxs]
+    relations[relations>0] = 1
+
+    all_relations = []
+    for i in range(len(bags_feature)):
+        insNum = bags_feature[i][1]
+        all_relations.append([relations[i]]*insNum)
+
+    # save
+    np.save(output_feat_name, bags_feature)
+    np.save(output_label_name, all_relations)
+    print("Done Validation Set to {}, ratio {} from train file.".format(output_dir_name, sample_ratio))
