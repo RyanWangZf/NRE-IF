@@ -142,6 +142,32 @@ class PCNN_ATT(BasicModule):
             assert self.training is True
             return self.fit(x, label)
 
+    def visualize(self,x):
+        self.bags_feature = self.get_bags_feature(x)
+        pre_y = []
+        att_scores = []
+        for label in range(0, self.opt.rel_num):
+            labels = [label for _ in range(len(x))]        # generate the batch labels
+            batch_feature = []
+            for bag_embs, label_ in zip(self.bags_feature, labels):
+                # calculate the weight: xAr or xr
+                alpha = bag_embs.mm(self.rel_embs[label_].view(-1, 1))
+                # alpha = bag_embs.mm(self.att_w[label]).mm(self.rel_embs[label].view(-1, 1))
+                bag_embs = bag_embs * F.softmax(alpha, 0)
+                bag_vec = torch.sum(bag_embs, 0)
+                batch_feature.append(bag_vec.unsqueeze(0))
+
+            pdb.set_trace()
+            bags_feature = torch.cat(batch_feature, 0)
+            out = self.test_scale_p * bags_feature.mm(self.rel_embs.t()) + self.rel_bias
+            pre_y.append(out.unsqueeze(1))
+
+        # return pre_y
+        res = torch.cat(pre_y, 1).max(1)[0]
+        return F.softmax(res, 1).t(), att_scores
+
+
+
     def fit(self, x, label):
         '''
         train process
@@ -163,7 +189,7 @@ class PCNN_ATT(BasicModule):
         '''
         pre_y = []
         for label in range(0, self.opt.rel_num):
-            labels = [label for _ in range(len(x))]                 # generate the batch labels
+            labels = [label for _ in range(len(x))]        # generate the batch labels
             bags_feature = self.get_batch_feature(labels)
             out = self.test_scale_p * bags_feature.mm(self.rel_embs.t()) + self.rel_bias
             # out = F.softmax(out, 1)

@@ -2,10 +2,11 @@
 import numpy as np
 import torch
 import os
-import pdb
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.utils.data import DataLoader
 import pandas as pd
+import pdb
 
 from config import opt
 import models
@@ -44,34 +45,27 @@ def load_ent2id(root_path="./dataset/NYT"):
     id2ent = np.load(id2ent_path, allow_pickle=True).item()
     return id2ent, ent2id
 
-def save_s_test(s_test):
-    s_test_dict = {kk:vv.detach().cpu().numpy() for kk,vv in enumerate(s_test)}
-    np.save("s_test", s_test_dict)
-
-def load_s_test(filename="s_test.npy"):
-    stest = np.load(filename,allow_pickle=True).item()
-    s_test_list = []
-    for k in stest.keys():
-        s_test_list.append(stest[k])
-    return s_test_list
-
 def setup_seed(seed):
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
     np.random.seed(seed)
     torch.backends.cudnn.deterministic = True
 
-def go(**kwargs):
-    kwargs.update({'model': 'PCNN_IF'})
 
-    kwargs.update({"load_model_path":"./checkpoints/PCNN_IF_DEF.pth"})
+def go(**kwargs):
+    # set one or att
+    kwargs.update({"model":"PCNN_ATT"})
+    kwargs.update({"load_model_path":"./checkpoints/PCNN_ATT_ATT_5.pth"})
+
+    # kwargs.update({"model":"PCNN_ONE"})
+    # kwargs.update({"load_model_path":"./checkpoints/PCNN_ONE_ONE_7.pth"})
 
     opt.parse(kwargs)
-    
+
     # load id to word dict
     word2id, id2word = load_word2id("./dataset/NYT")
     id2ent, ent2id = load_ent2id("./dataset/NYT")
-    
+
     # blank placeholder
     id2word[0] = "\t"
     
@@ -82,37 +76,32 @@ def go(**kwargs):
     if opt.use_gpu:
         torch.cuda.set_device(opt.gpu_id)
 
-    # load s_test
-    s_test_ar = load_s_test("s_test.npy")
-    
-    if opt.use_gpu:
-        s_test = [torch.Tensor(st).cuda() for st in s_test_ar]
-    else:
-        s_test = [torch.Tensor(st) for st in s_test_ar]
-
     # load model
     setup_seed(opt.seed)
 
-    model = getattr(models, 'PCNN_IF')(opt)
+    model = getattr(models, kwargs["model"])(opt)
 
     if opt.use_gpu:
-        # torch.cuda.manual_seed_all(opt.seed)
         model.cuda()
 
-    # model.load("./checkpoints/PCNN_IF_DEF.pth", opt.use_gpu)
     model.load(opt.load_model_path, opt.use_gpu)
 
     # start loop in train loader
     DataModel = getattr(dataset, opt.data + 'Data')
     train_data = DataModel(opt.data_root, "train")
-    train_data_loader = DataLoader(train_data, opt.batch_size, 
+    train_data_loader = DataLoader(train_data, 
+        opt.batch_size, 
         shuffle=False, 
         num_workers=opt.num_workers, 
         collate_fn=collate_fn)
 
     print('train data: {}'.format(len(train_data)))
 
-    demo_prefix = "./demo"
+    demo_prefix = "./demo_{}".format(kwargs["model"])
+    if not os.path.exists(demo_prefix):
+        os.mkdir(demo_prefix)
+
+    model.eval()
 
     for idx, (batch_data, label_set) in enumerate(train_data_loader):
         labels = [l[0] for l in label_set]
@@ -136,10 +125,11 @@ def go(**kwargs):
 
                 # get the relation
                 rel = id2rel[label.item()]
+                                
+                # make prediction
+                pred, att_score = model.visualize([data])
+                pred = pred.t()
                 
-                # compute the influence in this bag
-                phi, pred = model.cal_ins_influence(s_test, data, label)
-
                 # get the raw sentence
                 sent_list = []
                 for j in range(insNum):
@@ -153,22 +143,31 @@ def go(**kwargs):
                 pred_label = torch.max(pred, 1)[1].cpu().detach().numpy().tolist()
                 pred_label_ent = [id2rel[pp] for pp in pred_label]
                 pred_prob = torch.max(pred, 1)[0].cpu().detach().numpy().tolist()
+
+                att_score = F.softmax(att_score, 1)
+                
+                att_target = att_score[:,label].detach().cpu().numpy().tolist()
+                
+                att_max = torch.max(att_score,1)[0].detach().cpu().numpy().tolist()
+                
+                att_min = torch.min(att_score,1)[0].detach().cpu().numpy().tolist()
                 
                 df = pd.DataFrame({
                     "ent1": [ent1] * insNum,
                     "ent2": [ent2] * insNum,
                     "rel": [rel] * insNum,
-                    "influence":phi,
-                    "pred_prob":pred_prob,
-                    "pred_label":pred_label_ent,
+                    "score":att_target,
+                    "max_score":att_max,
+                    "min_score":att_min,
+                    "pred_prob":[pred_prob[0]]*insNum,
+                    "pred_label":[pred_label_ent[0]]*insNum,
                     "sentence":sent_list,
                     })
-
-                # sort by influence
-                df = df.sort_values(by="influence").reset_index(drop=True)
+                
+                # sort by att score
+                df = df.sort_values(by="score").reset_index(drop=True)
                 df.to_csv(save_name, encoding="utf-8")
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     import fire
     fire.Fire()
